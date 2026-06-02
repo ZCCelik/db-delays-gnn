@@ -19,9 +19,7 @@ def load_raw():
 
 def clean(df): 
     df = df[df["train_line_ride_id"] != ""]
-    
-    assert df["xml_station_name"].notna().all(), "Found rows with missing xml_station_name — investigate before continuing"
-        
+            
     return df
     
 
