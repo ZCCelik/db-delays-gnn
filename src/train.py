@@ -22,7 +22,6 @@ end_time = df_train["time"].max().ceil("h")
 hours = pd.date_range(start=start_time, end=end_time, freq="h")
 
 avg_delay_1h = np.full((len(hours), len(station_to_id)), np.nan)
-
 for i, h in enumerate(hours):
     rides_in_h = df_train[ (df_train["time"] >= h - pd.Timedelta("1h")) 
                         & (df_train["time"] < h)]
@@ -82,7 +81,7 @@ ride_station_id = df_train["station_id"].to_numpy()
 
 ride_targets = df_train["delay_in_min"].to_numpy()
 
-train_type_encoded = pd.get_dummies(df_train["train_type"])
+train_type_encoded = pd.get_dummies(df_train["train_type"]).astype(float)
 
 station_num_normalized = (df_train["train_line_station_num"] / df_train["train_line_station_num"].max())
 
@@ -99,3 +98,29 @@ ride_targets = torch.tensor(ride_targets, dtype=torch.float32)
 
 ride_features = torch.tensor(ride_features, dtype=torch.float32)
 
+print(x_snapshots.shape)      
+print(ride_features.shape) 
+
+deutscheBahnGNN = DeutscheBahnGNN(8, 32, 32, 54, 32)
+
+optimizer = torch.optim.Adam(deutscheBahnGNN.parameters(), lr=0.01)
+
+loss_fn = torch.nn.MSELoss()
+
+batch_size = 512
+num_epochs = 5
+
+for epoch in range(num_epochs):
+    df_train["snapshot_time"] = df_train.apply(lambda x: math.ceil)
+    for i in range(5):
+        snapshot_id = ride_to_snapshot_id[i]
+        x = x_snapshots[snapshot_id]
+
+        pred = deutscheBahnGNN(x, edge_index, ride_station_id[i:i+1], ride_features[i:i+1])
+        loss = loss_fn(pred, ride_targets[i:i+1])
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        
+        print(loss.item())
